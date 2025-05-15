@@ -1,0 +1,180 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TDEE & Protein Intake Calculator</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 40px 20px;
+      background-color: #FAFAFA;
+      font-family: Arial, sans-serif;
+    }
+    .container {
+      max-width: 480px;
+      margin: auto;
+      padding: 30px;
+      background-color: #FAFAFA;
+    }
+    h1 {
+      text-align: center;
+      color: #a87d52;
+      font-size: 28px;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+    }
+    p {
+      text-align: center;
+      font-size: 14px;
+      margin-bottom: 20px;
+    }
+    label {
+      margin-top: 16px;
+      display: block;
+      font-weight: bold;
+    }
+    input, select {
+      width: 100%;
+      padding: 10px;
+      margin-top: 4px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+      box-sizing: border-box;
+      height: 45px;
+    }
+    button {
+      margin-top: 24px;
+      padding: 12px;
+      background-color: #a87d52;
+      color: white;
+      border: none;
+      font-size: 16px;
+      cursor: pointer;
+      width: 100%;
+    }
+    button:hover {
+      background-color: #8c673f;
+    }
+    .result {
+      margin-top: 24px;
+      background: #efefef;
+      padding: 16px;
+      display: none;
+      line-height: 1.6;
+    }
+    .result.show {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>TDEE & Protein Intake Calculator</h1>
+    <p>Estimate your daily calorie needs and protein intake based on your body composition and activity level. TDEE = Total Daily Energy Expenditure (maintenance calories).</p>
+
+    <label for="unit">Measurement System:</label>
+    <select id="unit" onchange="toggleUnits()">
+      <option value="imperial" selected>Imperial (lbs)</option>
+      <option value="metric">Metric (kg)</option>
+    </select>
+
+    <label for="age">Age:</label>
+    <input type="number" id="age" placeholder="e.g. 30" />
+
+    <label for="weight">Weight:</label>
+    <input type="number" id="weight" placeholder="e.g. 150" />
+
+    <label for="bodyFat">Estimated Body Fat Percentage (%):</label>
+    <input type="number" id="bodyFat" placeholder="e.g. 20" />
+
+    <label for="sex">Biological Sex:</label>
+    <select id="sex">
+      <option value="1">Male</option>
+      <option value="0">Female</option>
+    </select>
+
+    <label for="activity">Activity Level:</label>
+    <select id="activity">
+      <option value="Sedentary">Sedentary (office job, no exercise)</option>
+      <option value="Light">Light Activity (exercise 1-2 days/week)</option>
+      <option value="Moderate">Moderate Activity (exercise 3-5 days/week)</option>
+      <option value="Heavy">Heavy Activity (laborious job, exercise most days)</option>
+      <option value="Athlete">Athlete (exercise 1-2x daily)</option>
+    </select>
+
+    <label for="recentDeficit">Have you recently been or are you currently in a calorie deficit?</label>
+    <select id="recentDeficit">
+      <option value="yes">Yes</option>
+      <option value="no">No</option>
+    </select>
+
+    <button onclick="calculateTDEEandProtein()">Calculate</button>
+    <div class="result" id="result"></div>
+  </div>
+
+  <script>
+    function toggleUnits() {
+      const unit = document.getElementById("unit").value;
+      const weightLabel = document.querySelector("label[for='weight']");
+      weightLabel.innerText = unit === "imperial" ? "Weight (lbs):" : "Weight (kg):";
+    }
+
+    function calculateTDEEandProtein() {
+      const unit = document.getElementById("unit").value;
+      let weight = parseFloat(document.getElementById("weight").value);
+      const age = parseInt(document.getElementById("age").value);
+      const bodyFat = parseFloat(document.getElementById("bodyFat").value) / 100;
+      const sex = parseInt(document.getElementById("sex").value);
+      const activity = document.getElementById("activity").value;
+      const recentDeficit = document.getElementById("recentDeficit").value;
+
+      if (isNaN(weight) || isNaN(age) || isNaN(bodyFat) || bodyFat >= 1) {
+        document.getElementById("result").innerText = "Please enter valid values for age, weight, and body fat %.";
+        document.getElementById("result").classList.remove("show");
+        return;
+      }
+
+      if (unit === "imperial") {
+        weight = weight * 0.453592;
+      }
+
+      const lbm = weight * (1 - bodyFat);
+      const fm = weight * bodyFat;
+      const bmr = (13.587 * lbm) + (9.613 * fm) + (198 * sex) - (3.351 * age) + 674;
+
+      const activityFactors = {
+        yes: {
+          Sedentary: 1.161,
+          Light: 1.338,
+          Moderate: 1.514,
+          Heavy: 1.69,
+          Athlete: 1.867
+        },
+        no: {
+          Sedentary: 1.211,
+          Light: 1.388,
+          Moderate: 1.564,
+          Heavy: 1.741,
+          Athlete: 1.917
+        }
+      };
+
+      const activityFactor = activityFactors[recentDeficit][activity];
+      const tdee = bmr * activityFactor;
+      const proteinPerKg = recentDeficit === "yes" ? 2.5 : 2.3;
+      const proteinGrams = lbm * proteinPerKg;
+
+      const resultElement = document.getElementById("result");
+      resultElement.innerHTML = `
+        <strong>Lean Body Mass:</strong> ${unit === "imperial" ? (lbm * 2.20462).toFixed(2) + ' lbs' : lbm.toFixed(2) + ' kg'}<br>
+        <strong>BMR:</strong> ${bmr.toFixed(0)} calories/day<br>
+        <strong>Estimated TDEE:</strong> ${tdee.toFixed(0)} calories/day<br>
+        <strong>Recommended Protein Intake:</strong> ${proteinGrams.toFixed(0)} grams/day
+      `;
+      resultElement.classList.add("show");
+    }
+  </script>
+</body>
+</html>
